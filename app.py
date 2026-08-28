@@ -8,9 +8,12 @@ import json
 import os
 
 st.set_page_config(page_title="IA Studio", page_icon="🪡", layout="wide")
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-# --- SISTEMA DE GUARDADO ---
+if "OPENAI_API_KEY" in st.secrets:
+    client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+else:
+    st.error("⚠️ Falta configurar la OPENAI_API_KEY en los Secrets de Streamlit Cloud.")
+
 CARPETA = "proyectos"
 if not os.path.exists(CARPETA):
     os.makedirs(CARPETA)
@@ -20,10 +23,17 @@ def guardar_chat(nombre, mensajes):
         json.dump(mensajes, f, ensure_ascii=False)
 
 def cargar_chat(nombre):
-    with open(f"{CARPETA}/{nombre}.json", "r", encoding="utf-8") as f:
-        return json.load(f)
+    ruta = f"{CARPETA}/{nombre}.json"
+    if os.path.exists(ruta):
+        try:
+            with open(ruta, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, list):
+                    return data
+        except Exception:
+            pass
+    return [{"role": "assistant", "content": "¡Hola! ¿Qué prenda te gustaría crear hoy?"}]
 
-# Inicializamos estados
 if "proyecto_actual" not in st.session_state:
     st.session_state.proyecto_actual = "Sin Proyecto"
 if "mensajes" not in st.session_state:
@@ -35,7 +45,6 @@ if "mensaje_pendiente" not in st.session_state:
 if "texto_usuario_pendiente" not in st.session_state:
     st.session_state.texto_usuario_pendiente = None
 
-# --- PESTAÑAS PRINCIPALES ---
 pestana_taller, pestana_revista, pestana_inspiracion, pestana_galeria = st.tabs([
     "🧵 Taller Virtual", 
     "✨ Revista de Inspiración", 
@@ -53,7 +62,6 @@ with pestana_galeria:
     mostrar_galeria()
 
 with pestana_taller:
-    # --- BARRA LATERAL ---
     with st.sidebar:
         if st.button("➕ Nueva Conversación", use_container_width=True, type="primary"):
             st.session_state.mensajes = [{"role": "assistant", "content": "¡Hola! ¿Qué prenda te gustaría crear hoy?"}]
@@ -64,17 +72,19 @@ with pestana_taller:
         st.markdown("---")
         st.title("📁 Mis Proyectos")
         
-        archivos = [f for f in os.listdir(CARPETA) if f.endswith(".json")]
-        archivos_ordenados = sorted(archivos, key=lambda x: os.path.getmtime(os.path.join(CARPETA, x)), reverse=True)
-        
-        for archivo in archivos_ordenados:
-            nombre_limpio = archivo.replace(".json", "")
-            tipo_boton = "primary" if nombre_limpio == st.session_state.proyecto_actual else "secondary"
-            if st.button(f"🧵 {nombre_limpio}", key=f"btn_{nombre_limpio}", use_container_width=True, type=tipo_boton):
-                st.session_state.mensajes = cargar_chat(nombre_limpio)
-                st.session_state.proyecto_actual = nombre_limpio
-                st.session_state.widget_key += 1
-                st.rerun()
+        if os.path.exists(CARPETA):
+            # Filtramos para que NUNCA intente leer archivos de la revista como si fueran chats
+            archivos = [f for f in os.listdir(CARPETA) if f.endswith(".json") and "revista" not in f.lower()]
+            archivos_ordenados = sorted(archivos, key=lambda x: os.path.getmtime(os.path.join(CARPETA, x)), reverse=True)
+            
+            for archivo in archivos_ordenados:
+                nombre_limpio = archivo.replace(".json", "")
+                tipo_boton = "primary" if nombre_limpio == st.session_state.proyecto_actual else "secondary"
+                if st.button(f"🧵 {nombre_limpio}", key=f"btn_{nombre_limpio}", use_container_width=True, type=tipo_boton):
+                    st.session_state.mensajes = cargar_chat(nombre_limpio)
+                    st.session_state.proyecto_actual = nombre_limpio
+                    st.session_state.widget_key += 1
+                    st.rerun()
 
         st.markdown("---")
         st.title("📎 Envíos Extra")
@@ -86,25 +96,27 @@ with pestana_taller:
             key=f"uploader_{st.session_state.widget_key}" 
         )
         
-        st.write("🎤 **Envía un audio**")
         audio_usuario = st.audio_input("Grabar mensaje", label_visibility="collapsed", key=f"audio_{st.session_state.widget_key}")
 
-    # --- PANTALLA PRINCIPAL DEL TALLER ---
     st.title("✨ El Taller Virtual de Belén")
     if st.session_state.proyecto_actual != "Sin Proyecto":
         st.subheader(f"🧵 {st.session_state.proyecto_actual}")
 
-    # Mostramos el historial
     for mensaje in st.session_state.mensajes:
-        with st.chat_message(mensaje["role"]):
-            if isinstance(mensaje["content"], list):
-                st.markdown(mensaje["content"][0]["text"])
-            else:
-                st.markdown(mensaje["content"])
+        if isinstance(mensaje, dict) and "role" in mensaje and "content" in mensaje:
+            with st.chat_message(mensaje["role"]):
+                contenido = mensaje["content"]
+                if isinstance(contenido, list):
+                    texto_mostrable = ""
+                    for item in contenido:
+                        if isinstance(item, dict) and item.get("type") == "text":
+                            texto_mostrable += item.get("text", "")
+                    st.markdown(texto_mostrable if texto_mostrable else "*(Imagen adjunta)*")
+                else:
+                    st.markdown(str(contenido))
 
     texto_usuario = st.chat_input("Escribe a tu mentora aquí...")
 
-    # --- 1. CAPTURAR ENTRADA Y LIMPIAR PANTALLA RÁPIDO ---
     if texto_usuario or audio_usuario:
         prompt_texto = None
         
@@ -129,34 +141,28 @@ with pestana_taller:
         st.session_state.widget_key += 1
         st.rerun()
 
-    # --- 2. PENSAR LA RESPUESTA ---
     if st.session_state.mensaje_pendiente:
-        
         st.session_state.mensajes.append({"role": "user", "content": st.session_state.mensaje_pendiente})
         with st.chat_message("user"):
             st.write(st.session_state.texto_usuario_pendiente)
 
         with st.chat_message("assistant"):
             with st.spinner("Cosiendo la respuesta... 🪡"):
-                
                 if st.session_state.proyecto_actual == "Sin Proyecto":
                     resp_titulo = client.chat.completions.create(
                         model="gpt-4o-mini",
                         messages=[{"role": "user", "content": f"Resume este texto en 2 a 4 palabras para el título de un proyecto de costura. Responde SOLO con el título, sin comillas ni puntos: '{st.session_state.texto_usuario_pendiente}'"}]
                     )
                     nuevo_titulo = resp_titulo.choices[0].message.content.strip()
-                    
                     titulo_final = nuevo_titulo
                     contador = 1
                     while os.path.exists(f"{CARPETA}/{titulo_final}.json"):
                         titulo_final = f"{nuevo_titulo} {contador}"
                         contador += 1
-                        
                     st.session_state.proyecto_actual = titulo_final
 
                 mensajes_api = [
                     {"role": "system", "content": """Eres una MAESTRA PATRONISTA. La usuaria NO SABE NADA de costura.
-                    
                     REGLAS ESTRICTAS E INQUEBRANTABLES:
                     1. INSPIRACIÓN: Si pide inspiración, genera SIEMPRE este botón exacto: [📌 Ver ideas en Pinterest](https://www.pinterest.es/search/pins/?q=tu+busqueda+aqui).
                     2. VÍDEOS EN CADA PASO: Obligatorio poner un enlace de YouTube JUSTO AL FINAL DE CADA PASO. 
@@ -168,7 +174,8 @@ with pestana_taller:
                 ]
                 
                 for msg in st.session_state.mensajes[:-1]: 
-                    mensajes_api.append({"role": msg["role"], "content": msg["content"]})
+                    if isinstance(msg, dict) and "role" in msg and "content" in msg:
+                        mensajes_api.append({"role": msg["role"], "content": msg["content"]})
                     
                 mensajes_api.append({"role": "user", "content": st.session_state.mensaje_pendiente})
 
@@ -177,7 +184,6 @@ with pestana_taller:
                 st.markdown(texto_ia)
                 
                 st.session_state.mensajes.append({"role": "assistant", "content": texto_ia})
-                
                 guardar_chat(st.session_state.proyecto_actual, st.session_state.mensajes)
                 
                 st.session_state.mensaje_pendiente = None
