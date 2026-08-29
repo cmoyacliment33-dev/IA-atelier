@@ -1,14 +1,21 @@
 import streamlit as st
-import os
 import base64
 from openai import OpenAI
 from datetime import datetime, timedelta
+from supabase import create_client, Client
 
-DIR_GALERIA = "galeria_fotos"
-os.makedirs(DIR_GALERIA, exist_ok=True)
+BUCKET_GALERIA = "galeria_fotos"
+
+# Inicializar Supabase de forma segura en la galería
+@st.cache_resource
+def init_supabase_galeria() -> Client:
+    url = st.secrets["SUPABASE_URL"]
+    key = st.secrets["SUPABASE_KEY"]
+    return create_client(url, key)
 
 def mostrar_galeria():
     client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+    supabase = init_supabase_galeria()
     
     if "mostrar_globos_galeria" not in st.session_state:
         st.session_state.mostrar_globos_galeria = False
@@ -29,9 +36,23 @@ def mostrar_galeria():
 
     st.markdown("<div class='galeria-header'><div class='galeria-titulo'>El Muro del Orgullo</div><div class='galeria-subtitulo'>Reto: 10 prendas en 6 meses</div></div>", unsafe_allow_html=True)
 
-    archivos_img = [f for f in os.listdir(DIR_GALERIA) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.webp'))]
-    archivos_img.sort(key=lambda x: os.path.getmtime(os.path.join(DIR_GALERIA, x)))
+    # 1. Listar archivos desde Supabase Storage
+    try:
+        archivos_storage = supabase.storage.from_(BUCKET_GALERIA).list()
+    except Exception:
+        archivos_storage = []
+
+    extensiones_validos = ('.png', '.jpg', '.jpeg', '.webp')
+    archivos_img = []
     
+    if archivos_storage:
+        for archivo in archivos_storage:
+            nombre = archivo["name"]
+            if nombre.lower().endswith(extensiones_validos):
+                archivos_img.append(archivo)
+        
+        archivos_img.sort(key=lambda x: x.get("created_at", ""))
+
     total_fotos = len(archivos_img)
     
     ciclo_actual = (total_fotos // 10) + 1
@@ -43,8 +64,13 @@ def mostrar_galeria():
     if total_fotos > 0:
         indice_primera_foto_ciclo = (ciclo_actual - 1) * 10
         if indice_primera_foto_ciclo < total_fotos:
-            ruta_primera_foto = os.path.join(DIR_GALERIA, archivos_img[indice_primera_foto_ciclo])
-            fecha_inicio = datetime.fromtimestamp(os.path.getmtime(ruta_primera_foto))
+            primera_foto_info = archivos_img[indice_primera_foto_ciclo]
+            created_at_str = primera_foto_info.get("created_at")
+            if created_at_str:
+                fecha_inicio = datetime.fromisoformat(created_at_str.replace("Z", "+00:00")).replace(tzinfo=None)
+            else:
+                fecha_inicio = datetime.now()
+                
             fecha_limite = fecha_inicio + timedelta(days=180)
             dias_restantes = (fecha_limite - datetime.now()).days
             
@@ -86,16 +112,24 @@ def mostrar_galeria():
             boton_subir = st.form_submit_button("Añadir al portfolio ✨")
 
             if boton_subir and foto_nueva is not None:
-                ruta_img = os.path.join(DIR_GALERIA, foto_nueva.name)
-                with open(ruta_img, "wb") as f:
-                    f.write(foto_nueva.getbuffer())
+                img_bytes = foto_nueva.getvalue()
+                nombre_archivo = foto_nueva.name
+
+                try:
+                    supabase.storage.from_(BUCKET_GALERIA).upload(
+                        path=nombre_archivo,
+                        file=img_bytes,
+                        file_options={"content-type": foto_nueva.type, "upsert": "true"}
+                    )
+                except Exception as e:
+                    st.error(f"Error al subir la imagen a la nube: {e}")
 
                 nuevo_total = total_fotos + 1
                 if nuevo_total > 0 and nuevo_total % 10 == 0:
                     st.session_state.mostrar_globos_galeria = True
 
                 with st.spinner("Generando reseña del diseño... 🧐"):
-                    img_b64 = base64.b64encode(foto_nueva.getvalue()).decode("utf-8")
+                    img_b64 = base64.b64encode(img_bytes).decode("utf-8")
                     try:
                         respuesta = client.chat.completions.create(
                             model="gpt-4o-mini",
@@ -111,9 +145,16 @@ def mostrar_galeria():
                     except Exception:
                         critica = "¡Te ha quedado genial! El acabado se ve súper limpio y el tejido encaja perfectamente con el patrón."
 
-                    ruta_txt = os.path.join(DIR_GALERIA, foto_nueva.name + ".txt")
-                    with open(ruta_txt, "w", encoding="utf-8") as f:
-                        f.write(critica)
+                nombre_txt = nombre_archivo + ".txt"
+                try:
+                    supabase.storage.from_(BUCKET_GALERIA).upload(
+                        path=nombre_txt,
+                        file=critica.encode("utf-8"),
+                        file_options={"content-type": "text/plain", "upsert": "true"}
+                    )
+                except Exception:
+                    pass
+
                 st.rerun()
 
     st.markdown("<hr style='opacity: 0.2; margin: 40px 0;'>", unsafe_allow_html=True)
@@ -121,16 +162,25 @@ def mostrar_galeria():
     if archivos_img:
         cols = st.columns(3)
         for i, archivo in enumerate(reversed(archivos_img)):
-            ruta_img = os.path.join(DIR_GALERIA, archivo)
-            ruta_txt = ruta_img + ".txt"
+            nombre_archivo = archivo["name"]
+            nombre_txt = nombre_archivo + ".txt"
             
+            try:
+                url_img = supabase.storage.from_(BUCKET_GALERIA).get_public_url(nombre_archivo)
+            except Exception:
+                url_img = ""
+
             critica_ia = "Un proyecto fantástico con muy buenos acabados."
-            if os.path.exists(ruta_txt):
-                with open(ruta_txt, "r", encoding="utf-8") as f:
-                    critica_ia = f.read()
+            try:
+                res_txt = supabase.storage.from_(BUCKET_GALERIA).download(nombre_txt)
+                if res_txt:
+                    critica_ia = res_txt.decode("utf-8")
+            except Exception:
+                pass
 
             with cols[i % 3]:
-                st.image(ruta_img, use_container_width=True)
+                if url_img:
+                    st.image(url_img, use_container_width=True)
                 st.markdown(f"<div class='vogue-review'>«{critica_ia}»</div><br>", unsafe_allow_html=True)
     else:
         st.info("Aún no has subido ningún proyecto terminado. ¡Tu muro te está esperando!")
