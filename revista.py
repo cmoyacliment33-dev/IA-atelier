@@ -8,13 +8,22 @@ import random
 import base64
 import shutil
 import hashlib
+from supabase import create_client, Client
 
 ARCHIVO_REVISTA = "revista_actual.json"
 DIR_DISPONIBLES = "imagenes_disponibles"
 DIR_USADAS = "imagenes_usadas"
+BUCKET_REVISTA = "galeria_fotos" # Reutilizamos el bucket de la galería
 
 os.makedirs(DIR_DISPONIBLES, exist_ok=True)
 os.makedirs(DIR_USADAS, exist_ok=True)
+
+# Inicializar cliente de Supabase para la revista
+@st.cache_resource
+def init_supabase_revista() -> Client:
+    url = st.secrets["SUPABASE_URL"]
+    key = st.secrets["SUPABASE_KEY"]
+    return create_client(url, key)
 
 # =====================================================================
 # 📸 TU FOTO DE EDITOR, TU CARTA Y EL REGALO DEL MES
@@ -50,12 +59,26 @@ def limpiar_imagenes_duplicadas():
             if filehash in hashes_usados:
                 os.remove(ruta)
 
-def obtener_img_base64(ruta):
-    if not os.path.exists(ruta):
-        return "https://loremflickr.com/400/600/menswear,portrait?lock=10"
-    with open(ruta, "rb") as img_file:
+def obtener_img_base64(ruta_o_nombre):
+    # 1. Intentar la ruta exacta (para assets/mi_foto.jpg)
+    if os.path.exists(ruta_o_nombre):
+        ruta_final = ruta_o_nombre
+    else:
+        # 2. Si es una foto de la revista, buscarla a prueba de reinicios
+        nombre_archivo = os.path.basename(ruta_o_nombre)
+        ruta_usada = os.path.join(DIR_USADAS, nombre_archivo)
+        ruta_disp = os.path.join(DIR_DISPONIBLES, nombre_archivo)
+        
+        if os.path.exists(ruta_usada):
+            ruta_final = ruta_usada
+        elif os.path.exists(ruta_disp):
+            ruta_final = ruta_disp
+        else:
+            return "https://loremflickr.com/400/600/menswear,portrait?lock=10"
+            
+    with open(ruta_final, "rb") as img_file:
         encoded = base64.b64encode(img_file.read()).decode()
-        ext = ruta.split('.')[-1].lower()
+        ext = ruta_final.split('.')[-1].lower()
         tipo = "png" if ext == "png" else ("webp" if ext == "webp" else "jpeg")
         return f"data:image/{tipo};base64,{encoded}"
 
@@ -65,16 +88,12 @@ def generar_doble_pagina_modular(index, articulo, fotos_mes, layout_asignado):
     cita = articulo.get("cita", "La moda es un lenguaje.")
     tag = articulo.get("tag", "Editorial")
     
-    # --- BLINDAJE DE LA LETRA CAPITAL ---
-    # Limpiamos por si la IA intentó meter HTML y metemos la letra capital desde Python
     txt_limpio = txt_original.replace("<span class='hb-dropcap'>", "").replace("</span>", "").strip()
     if len(txt_limpio) > 0:
         txt = f"<span class='hb-dropcap'>{txt_limpio[0]}</span>{txt_limpio[1:]}"
     else:
         txt = "<span class='hb-dropcap'>E</span>l arte de la moda siempre encuentra un camino."
-    # -------------------------------------
 
-    # Salvavidas por si se queda sin fotos
     if len(fotos_mes) == 0:
         fotos_mes = ["dummy.jpg"]
 
@@ -251,26 +270,28 @@ def mostrar_revista():
     limpiar_imagenes_duplicadas()
 
     client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+    supabase = init_supabase_revista()
+    
     mes_actual = datetime.datetime.now().strftime("%Y-%m")
     nombre_mes = datetime.datetime.now().strftime("%B %Y").capitalize()
     
     datos_revista = None
     generar_nueva = True
 
-    if os.path.exists(ARCHIVO_REVISTA):
-        with open(ARCHIVO_REVISTA, "r", encoding="utf-8") as f:
-            try:
-                datos_guardados = json.load(f)
-                if datos_guardados.get("mes") == mes_actual and "secciones" in datos_guardados:
-                    datos_revista = datos_guardados
-                    generar_nueva = False
-            except json.JSONDecodeError:
-                pass
+    # 1. Intentar descargar la revista del mes desde Supabase
+    try:
+        res = supabase.storage.from_(BUCKET_REVISTA).download(ARCHIVO_REVISTA)
+        if res:
+            datos_guardados = json.loads(res.decode("utf-8"))
+            if datos_guardados.get("mes") == mes_actual and "secciones" in datos_guardados:
+                datos_revista = datos_guardados
+                generar_nueva = False
+    except Exception:
+        pass
 
     if generar_nueva:
         with st.spinner(f"✨ Vogue AI redactando la edición de {nombre_mes}... (Esto puede tardar un poco por la longitud)"):
             
-            # --- PROMPT BLINDADO ---
             prompt = f"""
             Eres el redactor jefe de VOGUE y Harper's Bazaar. 
             Invéntate un TEMA CENTRAL completamente nuevo y conceptual para la edición de {nombre_mes}.
@@ -320,17 +341,15 @@ def mostrar_revista():
                 dst = os.path.join(DIR_USADAS, img)
                 try:
                     shutil.move(src, dst)
-                    fotos_mes.append(dst)
+                    fotos_mes.append(img) # Guardamos solo el nombre para que sobreviva a reinicios
                 except Exception:
                     pass
 
-            # Relleno seguro si faltan fotos
             if len(fotos_mes) < fotos_necesarias:
-                archivos_usados = [os.path.join(DIR_USADAS, f) for f in os.listdir(DIR_USADAS) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.webp', '.avif'))]
+                archivos_usados = [f for f in os.listdir(DIR_USADAS) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.webp', '.avif'))]
                 random.shuffle(archivos_usados)
                 faltantes = fotos_necesarias - len(fotos_mes)
                 
-                # Evita duplicados en la misma revista
                 fotos_extra = [f for f in archivos_usados if f not in fotos_mes]
                 fotos_mes.extend(fotos_extra[:faltantes])
                 
@@ -340,8 +359,16 @@ def mostrar_revista():
             random.shuffle(orden_layouts)
             datos_revista["orden_layouts"] = orden_layouts[:14] 
 
-            with open(ARCHIVO_REVISTA, "w", encoding="utf-8") as f:
-                json.dump(datos_revista, f, ensure_ascii=False)
+            # 2. Subir el JSON generado a Supabase para hacerlo permanente
+            try:
+                json_str = json.dumps(datos_revista, ensure_ascii=False)
+                supabase.storage.from_(BUCKET_REVISTA).upload(
+                    path=ARCHIVO_REVISTA,
+                    file=json_str.encode("utf-8"),
+                    file_options={"content-type": "application/json", "upsert": "true"}
+                )
+            except Exception as e:
+                pass 
 
     fotos_mes = datos_revista.get("fotos_mes", [])
     orden_layouts = datos_revista.get("orden_layouts", list(range(1, 13)))
@@ -431,7 +458,6 @@ def mostrar_revista():
     </div>
     """
 
-    # --- BLINDAJE PARA EVITAR PANTALLAS BLANCAS EN EL JAVASCRIPT ---
     html_completo = f"""
     <!DOCTYPE html>
     <html>
