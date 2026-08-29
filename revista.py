@@ -9,7 +9,7 @@ import base64
 import shutil
 import hashlib
 
-ARCHIVO_REVISTA = "proyectos/revista_actual.json"
+ARCHIVO_REVISTA = "revista_actual.json"
 DIR_DISPONIBLES = "imagenes_disponibles"
 DIR_USADAS = "imagenes_usadas"
 
