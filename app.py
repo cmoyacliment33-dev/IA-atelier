@@ -6,6 +6,7 @@ from openai import OpenAI
 import base64
 import json
 import os
+from supabase import create_client, Client
 
 st.set_page_config(page_title="IA Studio", page_icon="🪡", layout="wide")
 
@@ -14,25 +15,54 @@ if "OPENAI_API_KEY" in st.secrets:
 else:
     st.error("⚠️ Falta configurar la OPENAI_API_KEY en los Secrets de Streamlit Cloud.")
 
-CARPETA = "proyectos"
-if not os.path.exists(CARPETA):
-    os.makedirs(CARPETA)
+# Inicializar cliente de Supabase
+@st.cache_resource
+def init_supabase() -> Client:
+    url = st.secrets["SUPABASE_URL"]
+    key = st.secrets["SUPABASE_KEY"]
+    return create_client(url, key)
+
+supabase = init_supabase()
+
+# --- FUNCIONES DE BASE DE DATOS (SUPABASE) ---
 
 def guardar_chat(nombre, mensajes):
-    with open(f"{CARPETA}/{nombre}.json", "w", encoding="utf-8") as f:
-        json.dump(mensajes, f, ensure_ascii=False)
+    try:
+        supabase.table("proyectos_chats").upsert({
+            "nombre_proyecto": nombre,
+            "mensajes": mensajes
+        }, on_conflict="nombre_proyecto").execute()
+    except Exception as e:
+        st.error(f"Error al guardar en la base de datos: {e}")
 
 def cargar_chat(nombre):
-    ruta = f"{CARPETA}/{nombre}.json"
-    if os.path.exists(ruta):
-        try:
-            with open(ruta, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                if isinstance(data, list):
-                    return data
-        except Exception:
-            pass
+    try:
+        respuesta = supabase.table("proyectos_chats").select("mensajes").eq("nombre_proyecto", nombre).execute()
+        if respuesta.data and len(respuesta.data) > 0:
+            data = respuesta.data[0]["mensajes"]
+            if isinstance(data, list):
+                return data
+    except Exception:
+        pass
     return [{"role": "assistant", "content": "¡Hola! ¿Qué prenda te gustaría crear hoy?"}]
+
+def obtener_lista_proyectos():
+    try:
+        respuesta = supabase.table("proyectos_chats").select("nombre_proyecto, created_at").order("created_at", desc=True).execute()
+        if respuesta.data:
+            return [item["nombre_proyecto"] for item in respuesta.data]
+    except Exception:
+        pass
+    return []
+
+def comprobar_proyecto_existe(nombre):
+    try:
+        respuesta = supabase.table("proyectos_chats").select("nombre_proyecto").eq("nombre_proyecto", nombre).execute()
+        return len(respuesta.data) > 0
+    except Exception:
+        return False
+
+# ---------------------------------------------
 
 if "proyecto_actual" not in st.session_state:
     st.session_state.proyecto_actual = "Sin Proyecto"
@@ -72,17 +102,13 @@ with pestana_taller:
         st.markdown("---")
         st.title("📁 Mis Proyectos")
         
-        if os.path.exists(CARPETA):
-            # Filtramos para que NUNCA intente leer archivos de la revista como si fueran chats
-            archivos = [f for f in os.listdir(CARPETA) if f.endswith(".json") and "revista" not in f.lower()]
-            archivos_ordenados = sorted(archivos, key=lambda x: os.path.getmtime(os.path.join(CARPETA, x)), reverse=True)
-            
-            for archivo in archivos_ordenados:
-                nombre_limpio = archivo.replace(".json", "")
-                tipo_boton = "primary" if nombre_limpio == st.session_state.proyecto_actual else "secondary"
-                if st.button(f"🧵 {nombre_limpio}", key=f"btn_{nombre_limpio}", use_container_width=True, type=tipo_boton):
-                    st.session_state.mensajes = cargar_chat(nombre_limpio)
-                    st.session_state.proyecto_actual = nombre_limpio
+        proyectos_guardados = obtener_lista_proyectos()
+        if proyectos_guardados:
+            for proyecto in proyectos_guardados:
+                tipo_boton = "primary" if proyecto == st.session_state.proyecto_actual else "secondary"
+                if st.button(f"🧵 {proyecto}", key=f"btn_{proyecto}", use_container_width=True, type=tipo_boton):
+                    st.session_state.mensajes = cargar_chat(proyecto)
+                    st.session_state.proyecto_actual = proyecto
                     st.session_state.widget_key += 1
                     st.rerun()
 
@@ -156,7 +182,7 @@ with pestana_taller:
                     nuevo_titulo = resp_titulo.choices[0].message.content.strip()
                     titulo_final = nuevo_titulo
                     contador = 1
-                    while os.path.exists(f"{CARPETA}/{titulo_final}.json"):
+                    while comprobar_proyecto_existe(titulo_final):
                         titulo_final = f"{nuevo_titulo} {contador}"
                         contador += 1
                     st.session_state.proyecto_actual = titulo_final
