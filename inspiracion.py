@@ -84,7 +84,7 @@ def mostrar_buscador():
     """, unsafe_allow_html=True)
 
     # HTML comprimido sin saltos de línea para que Streamlit no se rompa
-    html_content = """<div class="inspiracion-container"><div class="titulo-inspiracion">Cazadora de Ideas</div><div class="subtitulo-inspiracion">Tu moodboard de alta costura a un clic</div><form class="search-box" action="https://www.pinterest.com/search/pins/" method="get" target="_blank"><input class="search-input" type="text" name="q" placeholder="Ej: Patronaje mangas globo, bordados vintage..."><button class="search-btn" type="submit">Inspirarme</button></form></div>"""
+    html_content = """<div class="inspiracion-container"><div class="titulo-inspiracion">Moodboard</div><div class="subtitulo-inspiracion">Tu moodboard de alta costura a un clic</div><form class="search-box" action="https://www.pinterest.com/search/pins/" method="get" target="_blank"><input class="search-input" type="text" name="q" placeholder="Ej: Patronaje mangas globo, bordados vintage..."><button class="search-btn" type="submit">Inspirarme</button></form></div>"""
     
     st.markdown(html_content, unsafe_allow_html=True)
 
