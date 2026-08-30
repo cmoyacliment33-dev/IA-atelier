@@ -10,12 +10,94 @@ from supabase import create_client, Client
 
 st.set_page_config(page_title="IA Studio", page_icon="🪡", layout="wide")
 
+# ==========================================
+# 💅 ESTÉTICA EDITORIAL Y MENÚ DINÁMICO
+# ==========================================
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Montserrat:wght@300;400;500;600&display=swap');
+
+/* Tipografía de encabezados global */
+h1, h2, h3, h4 { font-family: 'Playfair Display', serif !important; color: #111111 !important; }
+p, span, div, label { font-family: 'Montserrat', sans-serif; }
+
+/* Estilo de la barra lateral (Solo visible en Taller) */
+[data-testid="stSidebar"] { background-color: #f4f1eb !important; border-right: 1px solid #e6e2d8 !important; }
+
+/* Transformar el Radio Button de navegación superior en Pestañas Elegantes */
+div[role="radiogroup"] {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    margin-bottom: 30px;
+    border-bottom: 1px solid #eae6df;
+    padding-bottom: 10px;
+}
+div[role="radiogroup"] label {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    cursor: pointer;
+}
+div[role="radiogroup"] label > div:first-child {
+    display: none !important; /* Oculta el círculo de selección */
+}
+div[role="radiogroup"] label p {
+    font-family: 'Montserrat', sans-serif !important;
+    font-size: 13px !important;
+    letter-spacing: 2px !important;
+    text-transform: uppercase !important;
+    font-weight: 600 !important;
+    color: #999 !important;
+    margin: 0 !important;
+    transition: color 0.3s;
+}
+div[role="radiogroup"] label[data-checked="true"] p {
+    color: #111 !important;
+    border-bottom: 2px solid #111;
+    padding-bottom: 5px;
+}
+
+/* Botones Primary y Secondary (Barra lateral) */
+button[kind="primary"] {
+    background-color: #111111 !important;
+    color: white !important;
+    font-family: 'Montserrat', sans-serif !important;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 12px !important;
+    border-radius: 0px !important;
+    border: none !important;
+    transition: all 0.3s ease;
+}
+button[kind="primary"]:hover { background-color: #333333 !important; }
+
+button[kind="secondary"] {
+    background-color: transparent !important;
+    color: #111111 !important;
+    border: 1px solid #111111 !important;
+    font-family: 'Montserrat', sans-serif !important;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 12px !important;
+    border-radius: 0px !important;
+    transition: all 0.3s ease;
+}
+button[kind="secondary"]:hover { background-color: #111111 !important; color: white !important; }
+
+/* Cajas de mensajes del chat (Burbujas) */
+[data-testid="stChatMessage"] { background-color: transparent !important; border-bottom: 1px solid #f0eee9; padding: 2rem 0 !important; }
+.stFileUploader small { display: none; }
+hr { border-top: 1px solid #111 !important; opacity: 0.1; }
+</style>
+""", unsafe_allow_html=True)
+# ==========================================
+
 if "OPENAI_API_KEY" in st.secrets:
     client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 else:
     st.error("⚠️ Falta configurar la OPENAI_API_KEY en los Secrets de Streamlit Cloud.")
 
-# Inicializar cliente de Supabase
 @st.cache_resource
 def init_supabase() -> Client:
     url = st.secrets["SUPABASE_URL"]
@@ -23,8 +105,6 @@ def init_supabase() -> Client:
     return create_client(url, key)
 
 supabase = init_supabase()
-
-# --- FUNCIONES DE BASE DE DATOS (SUPABASE) ---
 
 def guardar_chat(nombre, mensajes):
     try:
@@ -62,8 +142,6 @@ def comprobar_proyecto_existe(nombre):
     except Exception:
         return False
 
-# ---------------------------------------------
-
 if "proyecto_actual" not in st.session_state:
     st.session_state.proyecto_actual = "Sin Proyecto"
 if "mensajes" not in st.session_state:
@@ -75,32 +153,63 @@ if "mensaje_pendiente" not in st.session_state:
 if "texto_usuario_pendiente" not in st.session_state:
     st.session_state.texto_usuario_pendiente = None
 
-pestana_taller, pestana_revista, pestana_inspiracion, pestana_galeria = st.tabs([
-    "🧵 Taller Virtual", 
-    "✨ Revista de Inspiración", 
-    "💡 Cazadora de Ideas", 
-    "📸 Galería y Recompensas"
-])
+# ==========================================
+# SISTEMA DE NAVEGACIÓN Y FONDOS DINÁMICOS
+# ==========================================
+opcion_nav = st.radio(
+    "Navegación",
+    ["🧵 Taller Virtual", "✨ Revista de Inspiración", "💡 Moodboard", "📸 Galería y Recompensas"],
+    horizontal=True,
+    label_visibility="collapsed"
+)
 
-with pestana_revista:
+if opcion_nav == "✨ Revista de Inspiración":
+    st.markdown("<style>.stApp { background-color: #fdfcf9; }</style>", unsafe_allow_html=True)
     mostrar_revista()
 
-with pestana_inspiracion:
+elif opcion_nav == "💡 Moodboard":
+    st.markdown("""
+    <style>
+    /* Fondo estilo Papel de Patronaje */
+    .stApp { 
+        background-color: #fdfcf9; 
+        background-image: 
+            linear-gradient(#e1dcd0 1px, transparent 1px), 
+            linear-gradient(90deg, #e1dcd0 1px, transparent 1px); 
+        background-size: 40px 40px; 
+    }
+    
+    /* Caja de búsqueda con efecto relieve sobre la cuadrícula */
+    div[data-testid="stForm"] {
+        background: rgba(253, 252, 249, 0.95) !important;
+        padding: 40px !important;
+        border-radius: 8px;
+        border: 1px solid #e1dcd0;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+    }
+    </style>
+    """, unsafe_allow_html=True)
     mostrar_buscador()
 
-with pestana_galeria:
+elif opcion_nav == "📸 Galería y Recompensas":
+    # Fondo con patrón sutil de puntos
+    st.markdown("<style>.stApp { background-color: #fdfcf9; background-image: radial-gradient(#d4cbb8 1px, transparent 1px); background-size: 25px 25px; }</style>", unsafe_allow_html=True)
     mostrar_galeria()
 
-with pestana_taller:
+else:
+    # 🧵 TALLER VIRTUAL (Fondo limpio para leer bien)
+    st.markdown("<style>.stApp { background-color: #fdfcf9; }</style>", unsafe_allow_html=True)
+
     with st.sidebar:
-        if st.button("➕ Nueva Conversación", use_container_width=True, type="primary"):
+        st.markdown("<div style='margin-bottom: 20px;'></div>", unsafe_allow_html=True)
+        if st.button("➕ NUEVA CONVERSACIÓN", use_container_width=True, type="primary"):
             st.session_state.mensajes = [{"role": "assistant", "content": "¡Hola! ¿Qué prenda te gustaría crear hoy?"}]
             st.session_state.proyecto_actual = "Sin Proyecto"
             st.session_state.widget_key += 1
             st.rerun()
 
-        st.markdown("---")
-        st.title("📁 Mis Proyectos")
+        st.markdown("<hr>", unsafe_allow_html=True)
+        st.markdown("<div style='font-family:Playfair Display,serif; font-size:22px; font-style:italic; color:#111; margin-bottom:10px;'>Mis Proyectos</div>", unsafe_allow_html=True)
         
         proyectos_guardados = obtener_lista_proyectos()
         if proyectos_guardados:
@@ -112,8 +221,8 @@ with pestana_taller:
                     st.session_state.widget_key += 1
                     st.rerun()
 
-        st.markdown("---")
-        st.title("📎 Envíos Extra")
+        st.markdown("<hr>", unsafe_allow_html=True)
+        st.markdown("<div style='font-family:Playfair Display,serif; font-size:22px; font-style:italic; color:#111; margin-bottom:10px;'>Archivos Adjuntos</div>", unsafe_allow_html=True)
         
         fotos_subidas = st.file_uploader(
             "Sube fotos de tu tela o ideas (Máx. 3-5)", 
@@ -122,11 +231,18 @@ with pestana_taller:
             key=f"uploader_{st.session_state.widget_key}" 
         )
         
+        st.markdown("<div style='font-family:Montserrat,sans-serif; font-size:12px; letter-spacing:2px; text-transform:uppercase; color:#666; margin-top:20px; margin-bottom:5px;'>O graba una nota de voz</div>", unsafe_allow_html=True)
         audio_usuario = st.audio_input("Grabar mensaje", label_visibility="collapsed", key=f"audio_{st.session_state.widget_key}")
 
-    st.title("✨ El Taller Virtual de Belén")
+    st.markdown("""
+        <div style="text-align: center; padding: 40px 0 20px 0;">
+            <div style="font-family: 'Montserrat', sans-serif; font-size: 11px; letter-spacing: 5px; color: #888; text-transform: uppercase; margin-bottom: 10px;">Atelier Privado</div>
+            <h1 style="font-size: 45px; margin: 0; line-height: 1.2;">El Taller de Belén</h1>
+        </div>
+    """, unsafe_allow_html=True)
+
     if st.session_state.proyecto_actual != "Sin Proyecto":
-        st.subheader(f"🧵 {st.session_state.proyecto_actual}")
+        st.markdown(f"<div style='text-align: center; font-family: Montserrat, sans-serif; font-size: 13px; font-weight: 600; letter-spacing: 2px; color: #111; text-transform: uppercase; border-bottom: 1px solid #ddd; padding-bottom: 20px; margin-bottom: 30px; display: inline-block; width: 100%;'>PROYECTO ACTUAL: {st.session_state.proyecto_actual}</div>", unsafe_allow_html=True)
 
     for mensaje in st.session_state.mensajes:
         if isinstance(mensaje, dict) and "role" in mensaje and "content" in mensaje:
@@ -193,7 +309,7 @@ with pestana_taller:
                     1. INSPIRACIÓN: Si pide inspiración, genera SIEMPRE este botón exacto: [📌 Ver ideas en Pinterest](https://www.pinterest.es/search/pins/?q=tu+busqueda+aqui).
                     2. VÍDEOS EN CADA PASO: Obligatorio poner un enlace de YouTube JUSTO AL FINAL DE CADA PASO. 
                     3. FORMATO DEL VÍDEO: Usa exactamente: [🎥 Ver vídeo de este paso](https://www.youtube.com/results?search_query=palabras+clave+separadas+por+signo+mas).
-                    4. BÚSQUEDAS ESPECÍFICAS: Deben ser muy precisas (ej: "como+coser+tirantes+top+tela").
+                    4. BÚSQUEDAS DE YOUTUBE BLINDADAS: La URL debe ser una fórmula exacta. DEBE contener la ACCIÓN DEL PASO (ej: "coser+tirantes", "hacer+patron") + la PRENDA ACTUAL (ej: "top", "falda") + "costura". TIENES PROHIBIDO mezclar prendas (nunca busques "pantalones" si hace un "top") o hacer búsquedas genéricas como "ajustes finales". Ejemplos correctos: "como+hacer+patron+top+costura", "como+coser+tirantes+top+costura".
                     5. DETALLE EXTREMO: Explica de qué lado mirar la tela, centímetros de margen, etc.
                     6. MEMORIA VISUAL: Si te pregunta por una foto que subió antes, mírala en tu historial.
                     """}
