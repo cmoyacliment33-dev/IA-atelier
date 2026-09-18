@@ -13,20 +13,17 @@ from supabase import create_client, Client
 ARCHIVO_REVISTA = "revista_actual.json"
 DIR_DISPONIBLES = "imagenes_disponibles"
 DIR_USADAS = "imagenes_usadas"
-BUCKET_REVISTA = "galeria_fotos" # Reutilizamos el bucket de la galería
+BUCKET_REVISTA = "galeria_fotos" 
 
 os.makedirs(DIR_DISPONIBLES, exist_ok=True)
 os.makedirs(DIR_USADAS, exist_ok=True)
 
-# Inicializar cliente de Supabase para la revista
 @st.cache_resource
 def init_supabase_revista() -> Client:
     url = st.secrets["SUPABASE_URL"]
     key = st.secrets["SUPABASE_KEY"]
     return create_client(url, key)
 
-# =====================================================================
-# 📸 TU FOTO DE EDITOR, TU CARTA Y EL REGALO DEL MES
 # =====================================================================
 RUTA_FOTO_EDITOR = "assets/mi_foto.jpg"
 
@@ -60,11 +57,9 @@ def limpiar_imagenes_duplicadas():
                 os.remove(ruta)
 
 def obtener_img_base64(ruta_o_nombre):
-    # 1. Intentar la ruta exacta (para assets/mi_foto.jpg)
     if os.path.exists(ruta_o_nombre):
         ruta_final = ruta_o_nombre
     else:
-        # 2. Si es una foto de la revista, buscarla a prueba de reinicios
         nombre_archivo = os.path.basename(ruta_o_nombre)
         ruta_usada = os.path.join(DIR_USADAS, nombre_archivo)
         ruta_disp = os.path.join(DIR_DISPONIBLES, nombre_archivo)
@@ -130,7 +125,6 @@ def generar_doble_pagina_modular(index, articulo, fotos_mes, layout_asignado):
         <div class="pagina-der" style="background-color: #eae6df; background-image: url('{img1}'); background-size: cover; background-position: center; {filtro_img}"><span class="numero-pagina np-der" style="color:white; text-shadow: 1px 1px 4px rgba(0,0,0,0.5);">{num_der}</span></div>
         """
     elif layout_asignado == 2:
-        # Añadido padding: 80px; en la página derecha
         html_base += f"""
         <div class="pagina-izq p1-izq" style="border-right: 1px solid rgba(150,150,150,0.2); display: flex; flex-direction: column;">
             <div class="hb-titulo-1" style="z-index: 100; color:{paleta["text"]};">The</div>
@@ -194,17 +188,16 @@ def generar_doble_pagina_modular(index, articulo, fotos_mes, layout_asignado):
         """
     elif layout_asignado == 7:
         html_base += f"""
-        <div class="pagina-izq" style="padding: 120px; display: flex; flex-direction: column; justify-content: center; align-items: center; border-right: 1px solid rgba(150,150,150,0.2); background: {paleta["bg"]};">
+        <div class="pagina-izq" style="background-color: #eae6df; background-image: url('{img1}'); background-size: cover; background-position: center; {filtro_img}"><span class="numero-pagina np-izq" style="color:white; text-shadow: 1px 1px 4px rgba(0,0,0,0.5);">{num_izq}</span></div>
+        <div class="pagina-der" style="padding: 100px; display: flex; flex-direction: column; justify-content: center; align-items: center; background: {paleta["bg"]};">
             <div class="seccion-tag" style="text-align:center; color:{paleta["accent"]};">{tag}</div><div class="hb-titulo-2" style="font-size: 60px; text-align:center; margin: 30px 0; color:{paleta["text"]};">{tit}</div>
-            <div style="font-size: 20px; text-align:center; font-style: italic; color: {paleta["accent"]};">"{cita}"</div><span class="numero-pagina np-izq" style="color:{paleta["accent"]};">{num_izq}</span>
-        </div>
-        <div class="pagina-der" style="padding: 100px; display: flex; align-items: center; justify-content: center; background: {paleta["bg"]};">
-            <div class="hb-columnas" style="column-count: 1; font-size: 19px; line-height: 2; color:{paleta["text"]};">{txt}</div><span class="numero-pagina np-der" style="color:{paleta["accent"]};">{num_der}</span>
+            <div style="font-size: 20px; text-align:center; font-style: italic; color: {paleta["accent"]}; margin-bottom: 40px;">"{cita}"</div>
+            <div class="hb-columnas" style="column-count: 1; font-size: 17px; line-height: 1.8; color:{paleta["text"]}; text-align: justify;">{txt}</div><span class="numero-pagina np-der" style="color:{paleta["accent"]};">{num_der}</span>
         </div>
         """
     elif layout_asignado == 8:
         html_base += f"""
-        <div class="pagina-izq" style="background-color: #eae6df; background-image: url('{img1}'); background-size: cover; background-position: center; position: relative;">
+        <div class="pagina-izq" style="background-color: #eae6df; background-image: url('{img2}'); background-size: cover; background-position: center; position: relative;">
              <div style="position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5);"></div>
              <div style="position: absolute; top: 80px; left: 80px; color: white; padding-right: 80px;">
                  <div class="seccion-tag" style="color: #ddd;">{tag}</div><div class="hb-titulo-2" style="font-size: 80px; color: white;">{tit}</div>
@@ -234,20 +227,23 @@ def generar_doble_pagina_modular(index, articulo, fotos_mes, layout_asignado):
         </div>
         <div class="pagina-der" style="padding: 100px; display: flex; flex-direction: column; justify-content: center; background: {paleta["bg"]};">
             <div class="seccion-tag" style="color:{paleta["accent"]};">{tag}</div><div class="hb-titulo-2" style="font-size: 65px; color:{paleta["text"]};">{tit}</div>
-            <div class="hb-columnas" style="color:{paleta["text"]}; margin-top:30px;">{txt}</div><span class="numero-pagina np-der" style="color:{paleta["accent"]};">{num_der}</span>
+            <div class="hb-columnas" style="color:{paleta["text"]}; margin-top:30px;">{txt}</div>
+            <div style="font-family: 'Playfair Display', serif; font-size: 26px; font-style: italic; color: {paleta["accent"]}; margin-top: 60px; border-top: 1px solid rgba(150,150,150,0.3); padding-top: 40px; text-align: center;">"{cita}"</div>
+            <span class="numero-pagina np-der" style="color:{paleta["accent"]};">{num_der}</span>
         </div>
         """
     elif layout_asignado == 11:
         html_base += f"""
         <div class="pagina-izq" style="display: flex; flex-direction: column; background: {paleta["bg"]};">
             <div style="flex: 1.5; background-color: #eae6df; background-image: url('{img1}'); background-size: cover; background-position: center; {filtro_img}"></div>
-            <div style="flex: 1; padding: 60px;">
+            <div style="flex: 1; padding: 60px; display: flex; flex-direction: column; justify-content: center;">
                 <div class="seccion-tag" style="color:{paleta["accent"]};">{tag}</div><div class="hb-titulo-2" style="font-size: 55px; color:{paleta["text"]}; margin-top: 10px;">{tit}</div>
             </div><span class="numero-pagina np-izq" style="color:{paleta["text"]};">{num_izq}</span>
         </div>
-        <div class="pagina-der" style="padding: 80px; display: flex; flex-direction: column; justify-content: space-between; background: {paleta["bg"]};">
+        <div class="pagina-der" style="padding: 80px; display: flex; flex-direction: column; justify-content: center; gap: 30px; background: {paleta["bg"]};">
+            <div style="font-family: 'Playfair Display', serif; font-size: 22px; font-style: italic; color: {paleta["accent"]}; text-align: center;">"{cita}"</div>
             <div class="hb-columnas" style="color:{paleta["text"]}; margin-top:0;">{txt}</div>
-            <div style="height: 40%; background-color: #eae6df; background-image: url('{img2}'); background-size: cover; background-position: center; {filtro_img}"></div>
+            <div style="height: 40%; min-height: 300px; background-color: #eae6df; background-image: url('{img2}'); background-size: cover; background-position: center; {filtro_img}"></div>
             <span class="numero-pagina np-der" style="color:{paleta["accent"]};">{num_der}</span>
         </div>
         """
@@ -279,7 +275,6 @@ def mostrar_revista():
     datos_revista = None
     generar_nueva = True
 
-    # 1. Intentar descargar la revista del mes desde Supabase
     try:
         res = supabase.storage.from_(BUCKET_REVISTA).download(ARCHIVO_REVISTA)
         if res:
@@ -291,7 +286,7 @@ def mostrar_revista():
         pass
 
     if generar_nueva:
-        with st.spinner(f"✨ Vogue AI redactando la edición de {nombre_mes}... (Esto puede tardar un poco por la longitud)"):
+        with st.spinner(f"✨ Vogue AI redactando la edición de {nombre_mes}... (Esto puede tardar un poco)"):
             
             prompt = f"""
             Eres el redactor jefe de VOGUE y Harper's Bazaar. 
@@ -299,12 +294,15 @@ def mostrar_revista():
             
             Genera el contenido en formato JSON.
             
-            REGLAS MUY ESTRICTAS PARA LOS TEXTOS ('texto'):
+            REGLAS MUY ESTRICTAS PARA LOS TEXTOS ('texto') Y TITULARES ('titular'):
             1. Son ensayos y crónicas reales, NO son índices.
-            2. VARIEDAD DE LONGITUD: 
-               - Alterna entre artículos largos y profundos (2 o 3 párrafos, unas 150-200 palabras) llenos de datos de moda, patronaje y curiosidades.
-               - Para otras secciones, escribe reseñas visuales muy cortas (1 solo párrafo de unas 30-40 palabras) para acompañar grandes fotos.
+            2. VARIEDAD DE LONGITUD DE TEXTO (MUY IMPORTANTE): 
+               - Crea una mezcla equilibrada. Algunos artículos deben ser largos y profundos (2 o 3 párrafos, unas 150-200 palabras) llenos de datos técnicos.
+               - Otros artículos deben ser reseñas muy cortas (1 solo párrafo de unas 30-40 palabras) para que la revista respire.
             3. OBLIGATORIO: Si tu texto tiene más de un párrafo, usa EXACTAMENTE la etiqueta "<br><br>" para separar los párrafos. NO uses ninguna otra etiqueta HTML.
+            4. VARIEDAD EN LOS TITULARES: 
+               - EXACTAMENTE la mitad de los artículos deben tener titulares compuestos usando dos puntos (Ejemplo: "ECO MODA: El futuro del planeta" o "SILUETAS: La nueva era").
+               - La otra mitad deben tener titulares muy cortos y directos (1 a 3 palabras máximo, ej: "Minimalismo", "El Nuevo Denim").
             
             Estructura JSON requerida (DEBES CREAR EXACTAMENTE 14 SECCIONES):
             {{
@@ -319,7 +317,7 @@ def mostrar_revista():
                         "texto": "Aquí tu ensayo, largo o corto según corresponda. Usa <br><br> para separar párrafos si es largo.",
                         "cita": "Una frase inspiradora relacionada"
                     }}
-                ] // Repite esto hasta tener EXACTAMENTE 14 objetos.
+                ]
             }}
             """
             
@@ -344,7 +342,7 @@ def mostrar_revista():
                 dst = os.path.join(DIR_USADAS, img)
                 try:
                     shutil.move(src, dst)
-                    fotos_mes.append(img) # Guardamos solo el nombre para que sobreviva a reinicios
+                    fotos_mes.append(img) 
                 except Exception:
                     pass
 
@@ -358,11 +356,9 @@ def mostrar_revista():
                 
             datos_revista["fotos_mes"] = fotos_mes
 
-            orden_layouts = list(range(1, 13)) * 2 
-            random.shuffle(orden_layouts)
-            datos_revista["orden_layouts"] = orden_layouts[:14] 
+            # Orden de layouts diseñado a mano para no repetir estructuras seguidas
+            datos_revista["orden_layouts"] = [1, 8, 2, 5, 3, 10, 4, 9, 6, 11, 7, 12, 1, 8]
 
-            # 2. Subir el JSON generado a Supabase para hacerlo permanente
             try:
                 json_str = json.dumps(datos_revista, ensure_ascii=False)
                 supabase.storage.from_(BUCKET_REVISTA).upload(
@@ -374,7 +370,7 @@ def mostrar_revista():
                 pass 
 
     fotos_mes = datos_revista.get("fotos_mes", [])
-    orden_layouts = datos_revista.get("orden_layouts", list(range(1, 13)))
+    orden_layouts = datos_revista.get("orden_layouts", [1, 8, 2, 5, 3, 10, 4, 9, 6, 11, 7, 12, 1, 8])
     
     datos_portada = datos_revista.get("portada", {"titulo": "VOGUE", "tema": "The Design Issue"})
     titulo_portada = datos_portada.get("titulo", "VOGUE")
@@ -479,7 +475,7 @@ def mostrar_revista():
     .pagina.doble {{ width: 100%; display: flex; }}
     .pagina.simple {{ display: flex; }}
 
-    .pagina-izq, .pagina-der {{ flex: 1; position: relative; box-sizing: border-box; }}
+    .pagina-izq, .pagina-der {{ flex: 1; flex-basis: 50%; max-width: 50%; position: relative; box-sizing: border-box; overflow: hidden; }}
     .numero-pagina {{ position: absolute; bottom: 40px; font-family: 'Montserrat', sans-serif; font-size: 12px; letter-spacing: 2px;}}
     .np-izq {{ left: 80px; }} .np-der {{ right: 80px; }}
     .seccion-tag {{ font-family: 'Montserrat', sans-serif; font-size: 12px; letter-spacing: 4px; text-transform: uppercase; font-weight: 600;}}
