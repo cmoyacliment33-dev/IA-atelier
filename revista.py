@@ -130,13 +130,14 @@ def generar_doble_pagina_modular(index, articulo, fotos_mes, layout_asignado):
         <div class="pagina-der" style="background-color: #eae6df; background-image: url('{img1}'); background-size: cover; background-position: center; {filtro_img}"><span class="numero-pagina np-der" style="color:white; text-shadow: 1px 1px 4px rgba(0,0,0,0.5);">{num_der}</span></div>
         """
     elif layout_asignado == 2:
+        # Añadido padding: 80px; en la página derecha
         html_base += f"""
         <div class="pagina-izq p1-izq" style="border-right: 1px solid rgba(150,150,150,0.2); display: flex; flex-direction: column;">
             <div class="hb-titulo-1" style="z-index: 100; color:{paleta["text"]};">The</div>
             <div class="hb-imagen" style="flex: 1; width: 80%; background-color: #eae6df; background-image: url('{img1}'); background-size: cover; background-position: center; z-index: 1; {filtro_img}"></div>
             <span class="numero-pagina np-izq" style="color:{paleta["accent"]};">{num_izq}</span>
         </div>
-        <div class="pagina-der p1-der" style="background: {paleta["bg"]}; display: flex; flex-direction: column; justify-content: center;">
+        <div class="pagina-der p1-der" style="background: {paleta["bg"]}; padding: 80px; display: flex; flex-direction: column; justify-content: center;">
             <div class="hb-titulo-2" style="font-size: 70px; color:{paleta["text"]};">{tit}</div>
             <div class="seccion-tag" style="margin-top: 20px; color:{paleta["accent"]};">{tag}</div>
             <div class="hb-columnas" style="color:{paleta["text"]};">{txt}</div><div class="linea-fina" style="background:{paleta["text"]};"></div>
@@ -299,9 +300,11 @@ def mostrar_revista():
             Genera el contenido en formato JSON.
             
             REGLAS MUY ESTRICTAS PARA LOS TEXTOS ('texto'):
-            1. Son ensayos reales, NO son índices. PROHIBIDO escribir frases como "En esta sección exploraremos", "A continuación" o "Bienvenidos a". Escribe directamente la opinión de moda.
-            2. Escribe 1 solo párrafo directo y profundo (aprox. 60-80 palabras).
-            3. PROHIBIDO usar código HTML. Solo texto plano.
+            1. Son ensayos y crónicas reales, NO son índices.
+            2. VARIEDAD DE LONGITUD: 
+               - Alterna entre artículos largos y profundos (2 o 3 párrafos, unas 150-200 palabras) llenos de datos de moda, patronaje y curiosidades.
+               - Para otras secciones, escribe reseñas visuales muy cortas (1 solo párrafo de unas 30-40 palabras) para acompañar grandes fotos.
+            3. OBLIGATORIO: Si tu texto tiene más de un párrafo, usa EXACTAMENTE la etiqueta "<br><br>" para separar los párrafos. NO uses ninguna otra etiqueta HTML.
             
             Estructura JSON requerida (DEBES CREAR EXACTAMENTE 14 SECCIONES):
             {{
@@ -313,7 +316,7 @@ def mostrar_revista():
                     {{
                         "titular": "Titular conceptual",
                         "tag": "Categoría (ej: Alta Costura, Reflexión)",
-                        "texto": "Aquí tu ensayo. Solo texto plano y directo al grano, sin HTML.",
+                        "texto": "Aquí tu ensayo, largo o corto según corresponda. Usa <br><br> para separar párrafos si es largo.",
                         "cita": "Una frase inspiradora relacionada"
                     }}
                 ] // Repite esto hasta tener EXACTAMENTE 14 objetos.
