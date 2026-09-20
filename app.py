@@ -8,7 +8,7 @@ import json
 import os
 from supabase import create_client, Client
 
-st.set_page_config(page_title="IA Studio", page_icon="🪡", layout="wide")
+st.set_page_config(page_title="Belen's Studio", page_icon="🪡", layout="wide")
 
 # ==========================================
 # 💅 ESTÉTICA EDITORIAL Y MENÚ DINÁMICO
