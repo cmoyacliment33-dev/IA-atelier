@@ -24,7 +24,6 @@ def init_supabase_revista() -> Client:
     key = st.secrets["SUPABASE_KEY"]
     return create_client(url, key)
 
-# =====================================================================
 RUTA_FOTO_EDITOR = "assets/mi_foto.jpg"
 
 TEXTO_DEL_EDITOR = """
@@ -38,7 +37,6 @@ REGALO_DEL_MES = """
 Elige la novela que más ganas tengas de leer y yo me encargo del resto. 📖✨<br><br>
 <i>(Pídemelo cuando sepas cuál quieres 😉)</i>
 """
-# =====================================================================
 
 def limpiar_imagenes_duplicadas():
     hashes_usados = set()
@@ -69,7 +67,7 @@ def obtener_img_base64(ruta_o_nombre):
         elif os.path.exists(ruta_disp):
             ruta_final = ruta_disp
         else:
-            return "https://loremflickr.com/400/600/menswear,portrait?lock=10"
+            return "https://placehold.co/400x600/eae6df/a39f98?text=+"
             
     with open(ruta_final, "rb") as img_file:
         encoded = base64.b64encode(img_file.read()).decode()
@@ -100,10 +98,12 @@ def generar_doble_pagina_modular(index, articulo, fotos_mes, layout_asignado):
         {"bg": "#ffffff", "text": "#111111", "accent": "#888888"},
         {"bg": "#faf8f5", "text": "#222222", "accent": "#666666"},
         {"bg": "#111111", "text": "#eeeeee", "accent": "#aaaaaa"},
-        {"bg": "#e6e4df", "text": "#1a1a1a", "accent": "#555555"} 
+        {"bg": "#0a0a0a", "text": "#fdfcf9", "accent": "#777777"} 
     ])
     
-    filtro_img = "filter: grayscale(100%) contrast(120%);" if paleta["bg"] == "#111111" else "filter: contrast(110%);"
+    # Filtro corregido para mantener los colores originales siempre
+    filtro_img = "filter: contrast(110%);"
+    
     tamano_titulo = random.choice(["70px", "90px", "110px"])
     alineacion = random.choice(["left", "center"])
     columnas = random.choice(["1", "2"])
@@ -269,8 +269,10 @@ def mostrar_revista():
     client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
     supabase = init_supabase_revista()
     
-    mes_actual = datetime.datetime.now().strftime("%Y-%m")
-    nombre_mes = datetime.datetime.now().strftime("%B %Y").capitalize()
+    fecha_actual = datetime.datetime.now()
+    mes_actual = fecha_actual.strftime("%Y-%m")
+    nombre_mes = fecha_actual.strftime("%B %Y").capitalize()
+    mes_numero = fecha_actual.month
     
     datos_revista = None
     generar_nueva = True
@@ -288,32 +290,55 @@ def mostrar_revista():
     if generar_nueva:
         with st.spinner(f"✨ Vogue AI redactando la edición de {nombre_mes}... (Esto puede tardar un poco)"):
             
+            calendario_temas = {
+                1: "Futurismo, tejidos técnicos y siluetas del año 3000",
+                2: "El impacto del Surrealismo y los sueños en el patronaje",
+                3: "La deconstrucción: prendas inacabadas y simetría rota",
+                4: "Inspiración floral oscura: la naturaleza salvaje en la alta costura",
+                5: "El arte de la sastrería clásica hiper-femenina",
+                6: "Fluidez extrema y tejidos translúcidos de inspiración marina",
+                7: "Estilo retro-futurista de los años 70",
+                8: "Arquitectura brutalista y la creación de prendas con volumen rígido",
+                9: "El color rojo y la psicología emocional en el vestir",
+                10: "Minimalismo extremo japonés y la belleza del vacío",
+                11: "El renacer del movimiento Punk y la moda de protesta",
+                12: "Decadencia elegante, terciopelo y lujo oscuro"
+            }
+            
+            tema_mes = calendario_temas.get(mes_numero, "Innovación en el diseño de moda")
+
             prompt = f"""
-            Eres el redactor jefe de VOGUE y Harper's Bazaar. 
-            Invéntate un TEMA CENTRAL completamente nuevo y conceptual para la edición de {nombre_mes}.
+            Eres el redactor jefe de una publicación de alta costura y ensayo visual.
+            
+            ATENCIÓN - REGLA ABSOLUTA Y ESTRICTA:
+            Esta edición es un NÚMERO MONOTEMÁTICO. El ÚNICO tema de TODA la revista es: '{tema_mes}'.
+            
+            ESTÁ TERMINANTEMENTE PROHIBIDO hacer un pupurrí de temas. 
+            Las 14 secciones que vas a generar DEBEN hablar EXCLUSIVAMENTE de '{tema_mes}'. 
+            Cada artículo debe abordar este mismo tema desde un ángulo diferente (materiales, siluetas, filosofía, arte), pero NUNCA cambiar a temas genéricos como "eco-cultura", "historia", "identidad global" o "colaboraciones" si no están 100% justificados por el tema principal '{tema_mes}'.
             
             Genera el contenido en formato JSON.
             
             REGLAS MUY ESTRICTAS PARA LOS TEXTOS ('texto') Y TITULARES ('titular'):
-            1. Son ensayos y crónicas reales, NO son índices.
+            1. Son ensayos y crónicas reales, y CADA UNA DE ELLAS debe centrarse obsesivamente en el tema '{tema_mes}'.
             2. VARIEDAD DE LONGITUD DE TEXTO (MUY IMPORTANTE): 
                - Crea una mezcla equilibrada. Algunos artículos deben ser largos y profundos (2 o 3 párrafos, unas 150-200 palabras) llenos de datos técnicos.
                - Otros artículos deben ser reseñas muy cortas (1 solo párrafo de unas 30-40 palabras) para que la revista respire.
             3. OBLIGATORIO: Si tu texto tiene más de un párrafo, usa EXACTAMENTE la etiqueta "<br><br>" para separar los párrafos. NO uses ninguna otra etiqueta HTML.
             4. VARIEDAD EN LOS TITULARES: 
-               - EXACTAMENTE la mitad de los artículos deben tener titulares compuestos usando dos puntos (Ejemplo: "ECO MODA: El futuro del planeta" o "SILUETAS: La nueva era").
-               - La otra mitad deben tener titulares muy cortos y directos (1 a 3 palabras máximo, ej: "Minimalismo", "El Nuevo Denim").
+               - EXACTAMENTE la mitad de los artículos deben tener titulares compuestos usando dos puntos.
+               - La otra mitad deben tener titulares muy cortos y directos (1 a 3 palabras máximo).
             
             Estructura JSON requerida (DEBES CREAR EXACTAMENTE 14 SECCIONES):
             {{
                 "portada": {{
                     "titulo": "PALABRA",
-                    "tema": "El tema central"
+                    "tema": "El tema central adaptado a '{tema_mes}'"
                 }},
                 "secciones": [
                     {{
                         "titular": "Titular conceptual",
-                        "tag": "Categoría (ej: Alta Costura, Reflexión)",
+                        "tag": "Categoría",
                         "texto": "Aquí tu ensayo, largo o corto según corresponda. Usa <br><br> para separar párrafos si es largo.",
                         "cita": "Una frase inspiradora relacionada"
                     }}
@@ -356,7 +381,6 @@ def mostrar_revista():
                 
             datos_revista["fotos_mes"] = fotos_mes
 
-            # Orden de layouts diseñado a mano para no repetir estructuras seguidas
             datos_revista["orden_layouts"] = [1, 8, 2, 5, 3, 10, 4, 9, 6, 11, 7, 12, 1, 8]
 
             try:
