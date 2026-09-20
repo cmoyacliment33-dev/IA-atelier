@@ -101,7 +101,6 @@ def generar_doble_pagina_modular(index, articulo, fotos_mes, layout_asignado):
         {"bg": "#0a0a0a", "text": "#fdfcf9", "accent": "#777777"} 
     ])
     
-    # Filtro corregido para mantener los colores originales siempre
     filtro_img = "filter: contrast(110%);"
     
     tamano_titulo = random.choice(["70px", "90px", "110px"])
@@ -488,6 +487,8 @@ def mostrar_revista():
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=Montserrat:wght@300;400;600&family=Libre+Barcode+39&display=swap');
     body {{ margin: 0; padding: 0; background-color: #ffffff; display: flex; justify-content: center; overflow-x: hidden; }}
+    
+    .aviso-movil {{ display: none; }}
     .revista-container {{ position: relative; width: 100%; max-width: 1700px; height: 1100px; display: flex; justify-content: center; background: #fff; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.1);}}
     
     .nav-zona {{ position: absolute; top: 0; bottom: 0; width: 150px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: rgba(0,0,0,0); font-size: 50px; transition: color 0.4s ease, background 0.4s ease; z-index: 100; user-select: none; }}
@@ -508,9 +509,54 @@ def mostrar_revista():
     .hb-columnas {{ column-gap: 50px; font-family: 'Playfair Display', serif; font-size: 17px; line-height: 1.8; margin-top: 50px; text-align: justify; }}
     .hb-dropcap {{ float: left; font-size: 90px; line-height: 65px; padding-top: 8px; padding-right: 10px; font-style: italic; font-weight: 700; }}
     .linea-fina {{ width: 100%; height: 1px; background: currentColor; margin: 50px 0; opacity: 0.3; }}
+    
+    /* EL NUEVO ESCUDO PARA MÓVILES SÚPER PREMIUM */
+    @media (max-width: 1000px) {{
+        .revista-container {{ display: none !important; }}
+        body {{ background-color: #050505; margin: 0; padding: 0; }}
+        .aviso-movil {{ 
+            display: flex; 
+            width: 100vw; 
+            height: 100vh; 
+            background: radial-gradient(circle at center, #1c1c1c 0%, #050505 100%); 
+            color: #fff; 
+            justify-content: center; 
+            align-items: center; 
+            padding: 20px; 
+            box-sizing: border-box; 
+        }}
+        .aviso-inner {{
+            border: 1px solid rgba(255,255,255,0.07);
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 40px;
+            box-sizing: border-box;
+            background: linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0) 100%);
+        }}
+    }}
     </style>
     </head>
     <body>
+        
+        <!-- PANTALLA DE AVISO PARA MÓVILES REDISEÑADA -->
+        <div class="aviso-movil">
+            <div class="aviso-inner">
+                <div style="font-size: 20px; color: #555; margin-bottom: 25px;">✧</div>
+                <h1 style="font-family: 'Playfair Display', serif; font-style: italic; font-size: 55px; margin-bottom: 5px; font-weight: 400; color: #fdfcf9; letter-spacing: 1px;">Belen's Studio</h1>
+                <div style="font-family: 'Montserrat', sans-serif; font-size: 10px; letter-spacing: 8px; color: #666; text-transform: uppercase; margin-bottom: 40px;">Private Atelier</div>
+                
+                <div style="width: 1px; height: 60px; background-color: rgba(255,255,255,0.15); margin: 0 auto 40px auto;"></div>
+                
+                <p style="font-family: 'Montserrat', sans-serif; font-size: 10px; letter-spacing: 4px; text-transform: uppercase; color: #999; line-height: 2;">La experiencia editorial<br>requiere una pantalla más grande.</p>
+                <p style="font-family: 'Playfair Display', serif; font-size: 18px; font-style: italic; color: #666; margin-top: 25px;">Por favor, abre tu Atelier<br>en tu iPad o en el ordenador.</p>
+            </div>
+        </div>
+
         <div class="revista-container">
             <div id="btn-izq" class="nav-zona izq" onclick="cambiarPagina(-1)">&#10094;</div>
             <div id="btn-der" class="nav-zona der" onclick="cambiarPagina(1)">&#10095;</div>
