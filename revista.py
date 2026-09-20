@@ -33,9 +33,10 @@ Que este mes te traiga tanta inspiración como la que tú nos regalas a los dem�
 """
 
 REGALO_DEL_MES = """
-🎉 <b>Un libro a tu elección</b><br><br>
-Elige la novela que más ganas tengas de leer y yo me encargo del resto. 📖✨<br><br>
-<i>(Pídemelo cuando sepas cuál quieres 😉)</i>
+🎨 <b>Tu propio Estudio de Diseño</b><br><br>
+Si te apetece probar a diseñar ropa sin el agobio de tener que dibujar el cuerpo humano desde cero, este es tu regalo.<br><br>
+Elige lo que más te guste: la app <b>Procreate</b> para el iPad, o un <b>cuaderno físico con plantillas de figurines</b> ya impresas. 🪡✨<br><br>
+<i>(Pídemelo cuando decidas con cuál de los dos prefieres empezar 😉)</i>
 """
 
 def limpiar_imagenes_duplicadas():
