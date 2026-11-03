@@ -27,15 +27,15 @@ def init_supabase_revista() -> Client:
 RUTA_FOTO_EDITOR = "assets/mi_foto.jpg"
 
 TEXTO_DEL_EDITOR = """
-Para la persona que no para quieta y necesita sus momentos de tranquilidad.<br><br>
+Para la persona más buena del mundo.<br><br>
 
-Que este mes te traiga tanta paz como la que tú nos regalas a los demás.
+Que esta revista te sirva de motivación para seguir adelante.
 """
 
 REGALO_DEL_MES = """
-🎨 <b>10€ en clickeez de Hello Kitty</b><br><br>
-Para que te desestreses con las teclas más puchis jsjs<br><br>
-Elige los que más te gusten (●'◡'●)✨<br><br>
+🎨 <b>15€ en un libro a tu elección</b><br><br>
+Para que te duela menos leer algún clásico<br><br>
+Elige el que quieras o te toque en tu planificación (* ￣3)(ε￣ *)✨<br><br>
 """
 
 def limpiar_imagenes_duplicadas():
