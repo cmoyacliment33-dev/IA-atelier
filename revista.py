@@ -28,12 +28,10 @@ RUTA_FOTO_EDITOR = "assets/mi_foto.jpg"
 
 TEXTO_DEL_EDITOR = """
 Para la persona más buena del mundo.<br><br>
-
 Que esta revista te sirva de motivación para seguir adelante.
 """
-
 REGALO_DEL_MES = """
-🎨 <b>15€ en un libro a tu elección</b><br><br>
+📖 <b>15€ en un libro a tu elección</b><br><br>
 Para que te duela menos leer algún clásico<br><br>
 Elige el que quieras o te toque en tu planificación (* ￣3)(ε￣ *)✨<br><br>
 """
